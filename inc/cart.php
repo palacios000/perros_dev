@@ -6,110 +6,39 @@
 
 	At the bottom of this file you see the scripts copied from the Nuxt template, they are probably useful for the interaction with SwellJS
 	 -->
-
-
-
-
-<div>
-  <!-- <div x-data="alpineStore()" > -->
-  <div x-data="alpineStore()" x-show="cartReady" >
+<div>  
+  <div v-if="cartReady" >
     <div class="fixed inset-0 z-50">
       <!-- Overlay -->
-      <div
-        class="overlay absolute hidden h-full w-full bg-neutral-500 opacity-90 md:block"
-        
-      >
-
-      <!-- Panel -->
-      <div class="panel absolute right-0 h-full w-full max-w-md">
-      	<button @click="cartReady = !cartReady">Close X</button>
-        <div class="h-full w-full overflow-y-scroll bg-white">
-          <!-- Header -->
-          <div class="container relative border-b border-primary-med py-5">
-            <div class="flex items-center justify-between">
-              <h3 >
-                Cart
-                <template x-if="myCart">
-                	<span x-text="myCart.item_quantity"></span>
-                </template
-                >
-              </h3>
-              <button @click.prevent="closeCart">
-                <BaseIcon icon="uil:multiply" size="lg" />
-              </button>
-            </div>
-
-            <div
-              v-if="$te('cart.infoText')"
-              class="mt-4 text-sm"
-              v-html="$t('cart.infoText')"
-            >
-          </div>
-
-          <!-- Items -->
-          <template x-if="myCart">
-              <template x-for="item in myCart.items">
-                <span x-text="item.product.name"></span>
-              </template>
-          </template>
-
-          <!-- <div v-if="cart && cart.items && cart.items.length">
-            <CartItem
-              v-for="(item, index) in cart.items"
-              :key="`cartItem_${item.id}`"
-              :item="item"
-              :index="index"
-            />
-          </div>
-          <div v-else class="container py-10">
-            <span class="mb-4 block">{{ $t('cart.empty') }}</span>
-            <BaseButton
-              :link="shopLink"
-              :label="$t('cart.backToProducts')"
-              fit="static"
-            />
-          </div> -->
-
-          <!-- Footer -->
-          <div
-            v-if="cart && cart.items && cart.items.length"
-            class="border-t border-primary-med bg-primary-lighter"
-          >
-
-            <!-- Summary -->
-            <div class="container border-b border-primary-med py-6">
-              <div class="mb-1 flex justify-between">
-                <span>Totale</span>
-                <span x-text="myCart.currency + ' ' +  myCart.sub_total"></span>
-              </div>
-              <div class="mb-1 flex justify-between">
-                <span>Spedizione</span>
-                <span x-text="myCart.currency + ' ' +  myCart.shipment_total"></span>
-              </div>
-              <div
-                v-show="cart.discountTotal"
-                class="mb-1 flex justify-between"
-              >
-                <span>Sconto</span>
-                <span x-text=" '-' + myCart.currency + ' ' +  myCart.discount_total"></span>
-              </div>
-
-              <h3 class="mt-3 flex justify-between text-xl font-semibold">
-                <span>Totale</span>
-                <span x-text="myCart.currency + ' ' +  myCart.grand_total"></span>
-              </h3>
-
-
-              <BaseButton
-                class="mt-4 mb-1 block"
-                size="lg"
-                :label="$t('cart.checkout')"
-                :is-loading="cartIsUpdating"
-                :loading-label="$t('cart.updating')"
-                :link="cart.checkoutUrl"
-                target="_self"
-              />
-            </div>
+      <div class="overlay absolute hidden h-full w-full bg-neutral-500 opacity-90 md:block">
+        <!-- Panel -->
+        <div class="panel absolute right-0 h-full w-full max-w-md">
+          <button @click="cartReady = !cartReady">Close X</button>
+          <div class="h-full w-full overflow-y-scroll bg-white">
+            <shopping-cart inline-template :items="cartItems">
+              <div>
+                  <table class="table table-cart">
+                    <tr v-for="(item, index) in items">
+                        <td>{{ item.product.name }}</td>
+                        <td><img class="img-responsive" :src="item.product.images[0].file.url" alt=""></td>
+                        <td>QTY:
+                          <input v-model="item.quantity" type="number" min="1">
+                        </td>
+                        <td class="text-right">{{ item.price }} {{ currency }}</td>
+                        <td>
+                          <button @click="removeItem(index)"><span class="glyphicon glyphicon-trash">X</span></button>
+                        </td>
+                    </tr>
+                    <tr v-show="items.length === 0">
+                        <td colspan="5" class="text-center">Cart is empty</td>
+                    </tr>
+                    <tr v-show="items.length > 0">
+                        <td colspan="2"></td>
+                        <td >Total: {{ Total | formatCurrency }} {{ currency }}</td>                        
+                    </tr>
+                  </table>
+              </div>              
+            </shopping-cart>
           </div>
         </div>
       </div>
@@ -118,55 +47,65 @@
 </div>
 
 <script>
-	// Helpers
-	/*import { mapState } from 'vuex'
+// The shopping cart component
+Vue.component('shopping-cart', {
+  props: ['items'],
 
-	export default {
-	  name: 'TheCart',
+  computed: {
+    Total() {      
+      let total = 0;
+      this.items.forEach(item => {
+        total += item.price * item.quantity;
+      });
+      return total;
+    } 
+  },
+  
+  methods: {
+    // Remove item by its index
+    removeItem(index) {
+      this.items.splice(index, 1);
+    } 
+  } 
 
-	  data() {
-	    return {
-	      couponCode: null,
-	      shopLink: null,
-	    }
-	  },
+});
 
-	  async fetch() {
-	    // Set component data
-	    const { $swell } = this
-	    this.shopLink = await $swell.settings.get('cart.shopLink', '/categories/')
-	  },
 
-	  computed: {
-	    ...mapState(['cart', 'cartIsUpdating', 'currency']),
+const vm = new Vue({
+  el: '#app',
+  data: {
+    cartItems: [],
+    items: [],
+    cartReady: false, 
+    quantity: 0,
+    currency: '$',
+  }, 
 
-	    account() {
-	      if (!this.cart.account) return
-	      return this.cart.account
-	    },
-	  },
-
-	  mounted() {
-	    // Pass a checkout ID as a query string param to recover a specific cart
-	    const { checkout: checkoutId } = this.$route.query
-	    this.$store.dispatch('initializeCart', { checkoutId })
-	  },
-
-	  methods: {
-	    closeCart() {
-	      this.$store.commit('setState', { key: 'cartIsActive', value: false })
-	    },
-
-	    async applyDiscount() {
-	      // Try to apply a coupon or gift card code
-	      await this.$store.dispatch('applyDiscount', this.couponCode)
-	      // Reset the coupon input
-	      this.couponCode = null
-	    },
-
-	    removeDiscount(id) {
-	      this.$store.dispatch('removeDiscount', id)
-	    },
-	  },
-	}*/
+  methods: {
+    // Add Items to cart
+    addToCart(itemToAdd={}) {       
+      
+      let xx = this;      
+      window.swell.cart.addItem({
+        product_id: '<?= $swellProductId ?>',
+        quantity: 1,
+        options: {
+          taglia: '<?= $tagliaOK ?>',
+          colore: '<?= $coloreOK ?>',
+          minuteria: '<?= $sceltaMinuteria ?>'
+        }
+      }).then( res => {
+        debugger
+        xx.cartItems = res.items;
+        xx.currency  = res.currency;
+      });      
+           
+      this.cartReady = true;
+    } 
+  },  
+  computed: {
+    quantity: function(e){      
+    }
+  }
+});
 </script>
